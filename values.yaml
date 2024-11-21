@@ -1,0 +1,36 @@
+architecture: replication
+auth:
+  database: dev_db
+  rootPassword: "your-root-password"
+  replicationPassword: "your-replication-password"
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+    runAsUser: 1001
+  service:
+    type: LoadBalancer
+    port: 3306
+
+secondary:
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 10Gi
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+    runAsUser: 1001
+
+replication:
+  enabled: true
+
+volumePermissions:
+  enabled: true
+
+metrics:
+  enabled: true

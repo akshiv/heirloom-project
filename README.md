@@ -53,6 +53,17 @@ flowchart TB
 ```
 
 ## Diagram for Single Node Failover Scenario
+
+### Failover Scenario
+
+1. Primary fails
+2. Orchestrator detects failure
+3. Select new Primary from secondaries
+4. Update replication
+5. Update Service endpoints
+6. Raise Notification that primary node failed
+
+
 ```mermaid
 flowchart TB
     subgraph "Kubernetes Cluster"
@@ -91,13 +102,4 @@ flowchart TB
 
     classDef failure fill:#ff6666,stroke:#333,stroke-width:2px
     class mysql1 failure
-
-    subgraph "Failover Scenario"
-        direction TB
-        step1["1. Primary fails"] --> step2["2. Orchestrator<br>detects failure"]
-        step2 --> step3["3. Select new Primary<br>from secondaries"]
-        step3 --> step4["4. Update replication"]
-        step4 --> step5["5. Update Service<br>endpoints"]
-        step5 --> step6["6. Raise Notification that primary node failed"]
-    end
 ```

@@ -17,14 +17,10 @@ primary:
     port: 3306
 
 secondary:
-  replicaCount: 3
+  replicaCount: 2
   persistence:
     enabled: true
     size: 10Gi
-  podSecurityContext:
-    enabled: true
-    fsGroup: 1001
-    runAsUser: 1001
 
 replication:
   enabled: true
@@ -34,3 +30,85 @@ volumePermissions:
 
 metrics:
   enabled: true
+
+extraDeploy:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: mysql-backup-s3-credentials
+    type: Opaque
+    stringData:
+      AWS_ACCESS_KEY_ID: AKIARHQBNZ2IYS3WBQPY
+      AWS_SECRET_ACCESS_KEY: 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
+  # Scheduled backup
+    # Scheduled backup
+  - apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      name: mysql-backup-scheduled
+    spec:
+      schedule: "0 0 * * *"  # Daily at midnight
+      successfulJobsHistoryLimit: 5
+      jobTemplate: &backup_template
+        spec:
+          template:
+            spec:
+              containers:
+              - name: backup
+                image: amazon/aws-cli:2.11.0
+                command: ["/bin/bash"]
+                env: &backup_env
+                - name: MYSQL_ROOT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql
+                      key: mysql-root-password
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql-backup-s3-credentials
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql-backup-s3-credentials
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: S3_BUCKET
+                  value: heirloom-technical-exercise-bucket-a6d3
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-2
+                args:
+                - -c
+                - |
+                  curl -LO https://repo.mysql.com/mysql80-community-release-el7.rpm
+                  yum localinstall -y mysql80-community-release-el7.rpm
+                  yum install -y mysql-community-client
+                  mysqldump -h mysql-primary -u root -p"${MYSQL_ROOT_PASSWORD}" --column-statistics=0 dev_db | \
+                  aws s3 cp - s3://${S3_BUCKET}/backups/dev_db-$(date +%Y-%m-%d).sql
+              restartPolicy: OnFailure
+
+  # Manual backup
+  - apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      name: mysql-backup-manual
+    spec:
+      schedule: "* * 31 2 *"  # Never runs automatically (Feb 31 doesn't exist)
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              containers:
+              - name: backup
+                image: amazon/aws-cli:2.11.0
+                command: ["/bin/bash"]
+                env: *backup_env
+                args:
+                - -c
+                - |
+                  curl -LO https://repo.mysql.com/mysql80-community-release-el7.rpm
+                  yum localinstall -y mysql80-community-release-el7.rpm
+                  yum install -y mysql-community-client
+                  mysqldump -h mysql-primary -u root -p"${MYSQL_ROOT_PASSWORD}" --column-statistics=0 dev_db | \
+                  aws s3 cp - s3://${S3_BUCKET}/backups/dev_db-manual-$(date +%Y-%m-%d-%H%M%S).sql
+              restartPolicy: OnFailure

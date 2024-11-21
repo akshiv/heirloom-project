@@ -97,7 +97,7 @@ extraDeploy:
                       name: mysql-backup-s3-credentials
                       key: AWS_SECRET_ACCESS_KEY
                 - name: S3_BUCKET
-                  value: akshivtestbucket
+                  value: heirloom-technical-exercise-bucket-a6d3
                 - name: AWS_DEFAULT_REGION
                   value: us-east-2
                 args:

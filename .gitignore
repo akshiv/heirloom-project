@@ -1,0 +1,28 @@
+### Helm template
+# Chart dependencies
+**/charts/*.tgz
+
+### K3s Deployment Specific
+k3s.yaml
+### secrets
+secrets.yaml
+
+### Python template
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+# Os Files
+.DS_STORE
+
+# Distribution / packaging
+.Python
+.python-version
+
+
+# PyCharm
+.idea/
+

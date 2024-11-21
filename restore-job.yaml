@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mysql-restore
+spec:
+  template:
+    spec:
+      containers:
+      - name: restore
+        image: amazon/aws-cli:2.11.0
+        command: ["/bin/bash"]
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: mysql-root-password
+        - name: AWS_ACCESS_KEY_ID
+          value: AWS_ACCESS_KEY
+        - name: AWS_SECRET_ACCESS_KEY
+          value: AWS_SECRET_ACCESS_KEY
+        - name: S3_BUCKET
+          value: akshivtestbucket
+        - name: AWS_DEFAULT_REGION
+          value: us-east-2
+        - name: BACKUP_FILE
+          value: "dev_db-manual-2024-11-21-184739.sql"  # Replace with your backup file name
+        args:
+        - -c
+        - |
+          curl -LO https://repo.mysql.com/mysql80-community-release-el7.rpm
+          yum localinstall -y mysql80-community-release-el7.rpm
+          yum install -y mysql-community-client
+          aws s3 cp s3://${S3_BUCKET}/backups/${BACKUP_FILE} /tmp/backup.sql
+          mysql -h mysql-primary -u root -p"${MYSQL_ROOT_PASSWORD}" dev_db < /tmp/backup.sql
+      restartPolicy: Never

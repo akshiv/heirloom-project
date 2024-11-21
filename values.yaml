@@ -1,32 +1,56 @@
+# values.yaml
 architecture: replication
 auth:
   database: dev_db
   rootPassword: "your-root-password"
-  replicationPassword: "your-replication-password"
 
 primary:
   persistence:
-    enabled: true
-    size: 10Gi
-  podSecurityContext:
-    enabled: true
-    fsGroup: 1001
-    runAsUser: 1001
-  service:
-    type: LoadBalancer
-    port: 3306
+    size: 8Gi
+  podAntiAffinity:
+    type: hard
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: OnDelete
+  tolerations:
+    - key: "node.kubernetes.io/unreachable"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 10
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/os
+            operator: In
+            values:
+            - linux
 
 secondary:
-  replicaCount: 2
+  replicaCount: 1
   persistence:
-    enabled: true
-    size: 10Gi
+    size: 8Gi
+  podAntiAffinity:
+    type: hard
+  podManagementPolicy: OrderedReady
+  tolerations:
+    - key: "node.kubernetes.io/unreachable"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 10
 
 replication:
   enabled: true
 
 volumePermissions:
   enabled: true
+
+podDisruptionBudget:
+  enabled: false
+
+service:
+  type: ClusterIP
 
 metrics:
   enabled: true
@@ -38,10 +62,9 @@ extraDeploy:
       name: mysql-backup-s3-credentials
     type: Opaque
     stringData:
-      AWS_ACCESS_KEY_ID: AKIARHQBNZ2IYS3WBQPY
-      AWS_SECRET_ACCESS_KEY: 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
+      AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_
   # Scheduled backup
-    # Scheduled backup
   - apiVersion: batch/v1
     kind: CronJob
     metadata:
@@ -49,7 +72,7 @@ extraDeploy:
     spec:
       schedule: "0 0 * * *"  # Daily at midnight
       successfulJobsHistoryLimit: 5
-      jobTemplate: &backup_template
+      jobTemplate:
         spec:
           template:
             spec:
@@ -74,7 +97,7 @@ extraDeploy:
                       name: mysql-backup-s3-credentials
                       key: AWS_SECRET_ACCESS_KEY
                 - name: S3_BUCKET
-                  value: heirloom-technical-exercise-bucket-a6d3
+                  value: akshivtestbucket
                 - name: AWS_DEFAULT_REGION
                   value: us-east-2
                 args:
